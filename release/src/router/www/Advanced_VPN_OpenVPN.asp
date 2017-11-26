@@ -145,6 +145,11 @@ function initial(){
 	show_menu();		
 	addOnlineHelp(document.getElementById("faq"), ["ASUSWRT", "VPN"]);
 
+	//if support pptpd and openvpnd then show switch button
+	if(pptpd_support && openvpnd_support) {
+		document.getElementById("divSwitchMenu").style.display = "";
+	}
+
 	formShowAndHide(vpn_server_enable, "openvpn");
 
 	/*Advanced Setting start */
@@ -171,7 +176,7 @@ function initial(){
 
 	updateCRTValue();
 	update_visibility();
-
+	update_cipher();
 	/*Advanced Setting end */
 
 	//check DUT is belong to private IP.
@@ -190,19 +195,19 @@ function show_warning_message(){
 		}
 		else if(realip_state != "2"){
 			if(validator.isPrivateIP(wanlink_ipaddr())){
-				document.getElementById("privateIP_notes").innerHTML = "<#vpn_privateIP_hint#>"
+				document.getElementById("privateIP_notes").innerHTML = "<#vpn_privateIP_hint#>";
 				document.getElementById("privateIP_notes").style.display = "";
 			}
 		}
 		else{
 			if(!external_ip){
-				document.getElementById("privateIP_notes").innerHTML = "<#vpn_privateIP_hint#>"
+				document.getElementById("privateIP_notes").innerHTML = "<#vpn_privateIP_hint#>";
 				document.getElementById("privateIP_notes").style.display = "";
 			}
 		}
 	}
 	else if(validator.isPrivateIP(wanlink_ipaddr())){
-		document.getElementById("privateIP_notes").innerHTML = "<#vpn_privateIP_hint#>"
+		document.getElementById("privateIP_notes").innerHTML = "<#vpn_privateIP_hint#>";
 		document.getElementById("privateIP_notes").style.display = "";
 	}
 }
@@ -283,7 +288,7 @@ function applyRule(){
 		if(!validator.numberRange(document.form.vpn_server_port, 1, 65535)) {
 			return false;
 		}
-		if(!validator.numberRange(document.form.vpn_server_poll, 0, 1440)) {
+		if(!validator.numberRange(document.form.vpn_server_poll, 0, 60)) {
 			return false;
 		}
 		if(!validator.numberRange(document.form.vpn_server_reneg, -1, 2147483647)) {
@@ -601,7 +606,7 @@ function addRow_Group(upper){
 	var password_obj = document.form.vpn_server_clientlist_password;
 	var rule_num = document.getElementById("openvpnd_clientlist_table").rows.length;
 	var item_num = document.getElementById("openvpnd_clientlist_table").rows[0].cells.length;		
-	if(rule_num >= upper + 1) {
+	if(rule_num >= upper) {
 		alert("<#JS_itemlimit1#> " + upper + " <#JS_itemlimit2#>");
 		return false;	
 	}
@@ -1105,6 +1110,14 @@ function defaultSettings() {
 	}
 }
 
+
+function update_cipher() {
+	$("#cipher_hint").css("display", "none");
+	var cipher = document.form.vpn_server_cipher.value;
+	if(cipher == "default")
+		$("#cipher_hint").css("display", "");
+}
+
 </script>
 </head>
 <body onload="initial();">
@@ -1177,7 +1190,7 @@ function defaultSettings() {
 									</td>
 								</tr>
 								<tr id="edit_tls4">
-									<th><#vpn_openvpn_KC_DH#></th>
+									<th><#vpn_openvpn_KC_DH#><br>(enter "none" to disable)</th>
 									<td>
 										<textarea rows="8" class="textarea_ssh_table" id="edit_vpn_crt_server_dh" name="edit_vpn_crt_server_dh" cols="65" maxlength="3999"></textarea>
 									</td>
@@ -1246,6 +1259,16 @@ function defaultSettings() {
 								<td bgcolor="#4D595D" valign="top">
 									<div>&nbsp;</div>
 									<div class="formfonttitle"><#BOP_isp_heart_item#> - OpenVPN</div>
+									<div id="divSwitchMenu" style="margin-top:-40px;float:right;display:none;">	
+										<div style="width:173px;height:30px;border-top-left-radius:8px;border-bottom-left-radius:8px;" class="block_filter">
+											<a href="Advanced_VPN_PPTP.asp">
+												<div class="block_filter_name">PPTP</div>
+											</a>
+										</div>
+										<div style="width:172px;height:30px;margin:-32px 0px 0px 173px;border-top-right-radius:8px;border-bottom-right-radius:8px;" class="block_filter_pressed">
+											<div style="text-align:center;padding-top:5px;color:#93A9B1;font-size:14px">OpenVPN</div>
+										</div>
+									</div>
 									<div style="margin-left:5px;margin-top:10px;margin-bottom:10px"><img src="/images/New_ui/export/line_export.png"></div>
 									<div id="privateIP_notes" class="formfontdesc" style="display:none;color:#FFCC00;"></div>
 									<table width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable">
@@ -1400,7 +1423,6 @@ function defaultSettings() {
 															}
 														);
 													</script>
-													<span>Warning: any unsaved change will be lost.</span>
 												</td>
 											</tr>
 											<tr>
@@ -1566,7 +1588,8 @@ function defaultSettings() {
 											<tr id="server_cipher">
 												<th>Legacy/fallback cipher</th>
 												<td>
-													<select name="vpn_server_cipher" class="input_option"></select>
+													<select name="vpn_server_cipher" class="input_option" onChange="update_cipher();"></select>
+													<span id="cipher_hint" style="color:#FC0">(Default : BF-CBC)</span>
 												</td>
 											</tr>
 											<tr>
@@ -1590,9 +1613,9 @@ function defaultSettings() {
 												</td>
 											</tr>
 											<tr>
-												<th>Global Log verbosity</th>
+												<th>Log verbosity</th>
 												<td>
-													<input type="text" maxlength="2" class="input_6_table"name="vpn_loglevel" onKeyPress="return validator.isNumber(this,event);"onblur="validate_number_range(this, 0, 11)" value="<% nvram_get("vpn_loglevel"); %>">
+													<input type="text" maxlength="2" class="input_6_table"name="vpn_server_verb" onKeyPress="return validator.isNumber(this,event);"onblur="validate_number_range(this, 0, 11)" value="<% nvram_get("vpn_server_verb"); %>">
 													<span style="color:#FC0">(Between 0 and 11. Default: 3)</span>
 												</td>
 											</tr>
@@ -1668,7 +1691,7 @@ function defaultSettings() {
 
 											<tr>
 												<td>
-													<textarea rows="8" class="textarea_ssh_table" name="vpn_server_custom" cols="55" maxlength="15000"><% nvram_clean_get("vpn_server_custom"); %></textarea>
+													<textarea rows="8" class="textarea_ssh_table" style="width:99%;" name="vpn_server_custom" cols="55" maxlength="15000"><% nvram_clean_get("vpn_server_custom"); %></textarea>
 												</td>
 											</tr>
 										</table>
